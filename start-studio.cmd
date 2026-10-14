@@ -7,7 +7,7 @@ if errorlevel 1 (
   exit /b 1
 )
 if not exist .next\BUILD_ID (
-  echo First run requires npm ci and npm run build. See docs\LAPTOP_SETUP.md.
+  echo First run requires npm ci and npm run build. See the laptop setup steps in README.md.
   pause
   exit /b 1
 )

@@ -4,22 +4,110 @@ A working local first milestone: ordered image references, prompt mentions, imag
 
 **Simulation is the default; live generation is disabled pending approval.** A Higgsfield/Kling adapter and durable worker are implemented. Server-side authentication has passed a read-only check, but no paid generation has run. Simulation output is a bundled animation matching the chosen 5- or 10-second duration and aspect ratio; it does not depict the uploaded reference or execute the prompt. See `docs/INTEGRATION.md` before enabling live mode.
 
-## Run locally
+## Laptop setup: follow these steps in order
 
-Requires **Node.js 22.17.0 or newer** with `node:sqlite`. Tested on Windows with Node 22.17.0. SQLite is experimental in that Node version and may print a warning. Stack: Next.js 16.4 App Router, React 19.3, TypeScript 6, Tailwind 4, Zod, SQLite, and local filesystem storage. The lockfile records exact compatible dependency versions. The UI uses a server-rendered trusted workspace shell enhanced by a browser controller; API routes and storage are written in TypeScript.
+These commands are for Windows PowerShell. Install Git and Node.js **22.17.0 or newer** with npm before starting, then reopen PowerShell. You need internet access, company repository access, and permission to install dependencies. Python, a GPU, and hosting are not required. Keep the laptop awake during setup.
+
+### 1. Verify the installed tools
 
 ```powershell
-cd D:\web-projects\wareesha-portfolio\ai-creator-studio
+node --version
+npm --version
+git --version
+```
+
+### 2. Download the project
+
+Run from the folder where you want to keep the project. Sign in to GitHub through its credential manager if prompted; never place a token in the clone URL.
+
+```powershell
+git clone https://github.com/etalogics/eta-ai-studio.git
+cd eta-ai-studio
+```
+
+### 3. Create local configuration
+
+Only copy the template on the first setup. This command preserves an existing configuration.
+
+```powershell
+if (!(Test-Path .env)) { Copy-Item .env.example .env }
+notepad .env
+```
+
+Keep these settings for the approved, no-charge test:
+
+```dotenv
+PORT=4310
+STUDIO_DATA_DIR=./data
+STUDIO_LIVE_ENABLED=false
+STUDIO_APPROVED_MODEL=
+```
+
+Simulation works without API credentials. If credentials are supplied securely, enter them only in the local ignored .env file. Never send that file to GitHub. Adding a key does not authorize paid generation. See docs/INTEGRATION.md for live integration requirements.
+
+### 4. Install dependencies
+
+```powershell
 npm ci
+```
+
+### 5. Build and verify
+
+Run each command separately; resolve a failure before continuing. Build before typecheck and tests because they use generated framework files and the production server.
+
+```powershell
+npm run lint
 npm run build
+npm run typecheck
+npm test
+```
+
+### 6. Start the app
+
+```powershell
 npm start
 ```
 
-Open **http://127.0.0.1:4310**. For development use `npm run dev` (or `node server.mjs`). For production build use `npm run build` (or `node scripts/build.mjs`), then `npm start` (or `node server.mjs --production`). On macOS/Linux, enter the equivalent checkout directory and use the same commands. Use the custom server scripts so the loopback binding and local session protections are established; do not replace them with an unconfigured `next start` command.
+Keep this terminal open and visit **http://127.0.0.1:4310**. Follow the complete flow below using Simulation. Press Ctrl+C in the terminal to stop. All seven supplied references can be uploaded locally; personal images are not included in the repository. Live provider input limits differ from simulation.
 
-If the Windows npm launcher reports a missing npm-cli.js, use the npm CLI bundled with your Node installation, for example `node "C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js" ci`. This workaround was used during development. The final framework migration supersedes the initial plain-Node prototype.
+### 7. Start again after restarting the laptop
 
-Optional configuration: copy `.env.example` to `.env`; set `PORT` and/or an absolute `STUDIO_DATA_DIR`. Restart after changes. API credentials must remain in `.env`, never browser code. The server supports `HF_API_KEY` with the complete copied REST credential, or `HF_API_KEY_ID` plus `HF_API_KEY_SECRET`. Settings reports configuration and authentication flags, never credential values. Configuring a key alone does not enable live generation. After explicit paid approval, set the documented model in `STUDIO_APPROVED_MODEL` and `STUDIO_LIVE_ENABLED=true`. Every live Generate action requires fresh consent. See `docs/INTEGRATION.md` and `docs/provider-verification.md` for limits and setup.
+Open PowerShell, enter your actual installation folder, then start:
+
+```powershell
+cd C:\path\to\eta-ai-studio
+npm start
+```
+
+Alternatively, double-click start-studio.cmd in the project folder on Windows. Open http://127.0.0.1:4310 again. Dependency installation and rebuilding are unnecessary on every reboot. Keep .env and data/ to retain configuration, references, drafts, and history.
+
+### 8. Install future updates
+
+Stop the app first and back up the complete data/ folder and .env locally. Then run:
+
+```powershell
+git pull --ff-only
+npm ci
+npm run lint
+npm run build
+npm run typecheck
+npm test
+npm start
+```
+
+If Git reports divergent history after a repository history update, preserve .env and data/, clone a fresh checkout into a different folder, then restore those local files while both apps are stopped. Do not use a destructive reset to repair a checkout containing unsaved work.
+
+### Troubleshooting
+
+- **node/npm/git not recognized:** install the missing tool and reopen PowerShell. Check Node's version against the requirement above.
+- **PowerShell blocks npm.ps1:** use npm.cmd in place of npm, for example npm.cmd ci. Do not change system execution policy for this.
+- **Missing npm-cli.js:** repair the Node/npm installation. If installed in the default Windows location, the bundled CLI can also run commands, for example: node "C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js" ci.
+- **Production build missing:** run npm ci and npm run build before npm start.
+- **Port 4310 already in use:** stop the previous app terminal, or change PORT in .env to 4311, restart, and visit http://127.0.0.1:4311.
+- **Cannot open localhost:** confirm npm start is still running, check terminal errors, and use the configured port on the same laptop. Remote setup requires an available AnyDesk session; a GitHub push does not install the app on another laptop.
+- **Live generation disabled:** this is the current approved configuration. Do not enable it to troubleshoot simulation. No paid requests are needed for the local flow test.
+
+For development use npm run dev. Production uses the project's custom server through npm start; do not replace it with an unconfigured next start. macOS/Linux use the same npm commands, with cp .env.example .env for a fresh configuration and the appropriate local project path.
 
 ## Walk through the complete flow
 
@@ -63,14 +151,5 @@ The handoff includes `docs/HANDOFF.md`, `docs/demo.mp4`, and `docs/screenshots/`
 ## Company GitHub handoff
 
 Company repository: https://github.com/etalogics/eta-ai-studio. On Windows, `start-studio.cmd` starts a previously built installation.
-
-This folder is prepared as a separate repository. The company organization/repository destination is still required before upload. Do not publish it as part of the surrounding portfolio repository.
-
-After receiving an approved empty company repository URL:
-
-```powershell
-git remote add origin <approved-company-repository-url>
-git push -u origin main
-```
 
 Keep the repository private unless the company authorizes otherwise. No API secrets or local runtime data belong in GitHub.
