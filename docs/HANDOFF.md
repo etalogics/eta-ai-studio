@@ -12,7 +12,7 @@ Target: the local image-to-video milestone due 14 October 2026 at 5:00 PM Pakist
 | Saved prompt/settings/status history | Implemented | Durable SQLite history and reference order; use settings does not submit |
 | Server-side API configuration and secret protection | Implemented | Local environment reader; public status returns booleans only; secrets/data ignored by Git |
 | Optional cost estimates | Implemented for simulation | $0; no estimate dependency in submission validation |
-| One approved live provider | Simulation fallback delivered | Higgsfield requested; account access and approved model unavailable; integration requirements documented |
+| One live provider | Adapter and worker prepared; execution disabled | Higgsfield authentication accepted. Kling 3.0 Standard documented; paid generation and actual model access remain untested pending approval |
 | Manual code review and testing | Completed for milestone behavior | Automated unit/integration and real-browser checks, plus screenshot review |
 | Separate company GitHub repository | Blocked | Company organization or repository URL and write access required |
 | Setup instructions and short demo | Prepared locally | README, test results, screenshots, and docs/demo.mp4 |

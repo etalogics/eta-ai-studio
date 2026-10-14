@@ -1,17 +1,22 @@
-# Live provider integration: pending
+# Higgsfield integration
 
-The requested provider in the original brief is Higgsfield. No provider substitution has been made. The revised first milestone explicitly permits simulation when access or supported inputs are unavailable. This build implements that fallback and does not claim a tested live integration.
+The local credential is configured outside Git. A read-only request-status check was accepted on 14 October 2026. This validates authentication, not model entitlement, balance, or a successful generation. No paid generation has been sent.
 
-Remaining requirements:
+Prepared model: `kling-video/v3.0/std/image-to-video` (Kling 3.0 Standard). It accepts one start frame. This adapter uses 5/10 seconds, sound off, and single-shot mode. Ratio comes from the start image; no ratio parameter is sent. Multiple references and local `@image` mentions are rejected rather than ignored. Other models are not silently substituted.
 
-1. Confirm the approved provider/model and obtain API account access and balance. Keep credentials local; do not send them in chat.
-2. Verify current official authentication and model catalog at https://open.higgsfield.ai and https://docs.higgsfield.ai at integration time. Verify upload transport, supported durations/ratios, start-frame behavior, reference counts/roles, native mention syntax, status/result retrieval, output expiry, and billing behavior.
-3. Implement a server-only provider adapter. Upload bytes via documented transport; provider servers cannot fetch localhost assets. Persist request IDs and normalized results.
-4. If the approved image-to-video model accepts only one start frame, block requests that require multiple images. Do not forward app `@image` tokens unless documented provider behavior or a documented mapping can honor their meaning. Show supported capabilities in the UI and validate them server-side.
-5. Add a durable worker, careful ambiguous-submit recovery, and documented provider idempotency if available. Stream downloaded real outputs into local storage. Do not retry generation blindly after timeouts.
-6. Cost estimates are optional per the revised brief. Label unavailable estimates honestly; they must not block approved generation in this milestone. Do not fabricate prices.
-7. Obtain explicit approval before any billable smoke test. Until then keep live generation disabled.
+The adapter uses signed uploads, server-only authorization, stable idempotency tokens, saved request/status IDs, background polling, streaming downloads, temporary files, and atomic output publication. SQLite leases prevent concurrent workers from claiming the same job. Restart resumes existing provider IDs. Ambiguous submissions without an ID enter `unknown` and are not automatically resubmitted. Media destinations and redirects must match trusted HTTPS hosts.
 
-The demo job lifecycle uses persisted timestamps; it needs no independent worker. It is not proof of provider polling, output downloading, or actual billing. No actual live job ran.
+Live execution is **disabled at the user's explicit request on 14 October 2026**. No paid smoke test is authorized. Only after new explicit approval for the exact model and a paid run may an operator set these local environment fields and restart:
 
-Deferred: characters, presets, additional providers, detailed cost reporting, cloud hosting, and the original full brief's broader reliability/security acceptance requirements.
+```dotenv
+STUDIO_APPROVED_MODEL=kling-video/v3.0/std/image-to-video
+STUDIO_LIVE_ENABLED=true
+```
+
+The account must have a successful authentication check matching the current credential. Run `node scripts/verify-provider.mjs` from the project directory after the app has initialized its database. Changing the credential invalidates the recorded fingerprint until verification is repeated. The browser sees status flags only.
+
+Each live generation additionally requires a fresh paid-consent checkbox and Generate click. Applying history settings clears consent. An unavailable estimate does not block an otherwise approved request, per the revised brief; the UI never displays simulated $0 costs as a live price. This milestone does not implement an app-wide spending budget.
+
+The adapter and worker have mocked tests. Real model submission, account balance, signed-storage host compatibility, provider output retrieval, and actual billing remain untested until a paid smoke test is approved. If a provider media host is outside the trusted set, verify it before adding its exact hostname to `STUDIO_MEDIA_HOSTS`; do not disable URL validation.
+
+Because a credential was posted in chat, rotate it through the provider console before ongoing use. Put replacement credentials directly in the local `.env`; never commit or share them.

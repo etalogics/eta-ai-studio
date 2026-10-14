@@ -10,7 +10,7 @@ const root=path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const data=mkdtempSync(path.join(tmpdir(),'studio-test-'));
 const port=14311;const base=`http://127.0.0.1:${port}`;
 let child;
-async function start(){child=spawn(process.execPath,['server.mjs','--production'],{cwd:root,env:{...process.env,PORT:String(port),STUDIO_DATA_DIR:data},stdio:['ignore','pipe','pipe']});await new Promise((resolve,reject)=>{child.stdout.on('data',b=>{if(b.toString().includes('SIMULATION ONLY'))resolve();});child.on('error',reject);child.on('exit',code=>reject(new Error(`Server exited ${code}`)));});}
+async function start(){child=spawn(process.execPath,['server.mjs','--production'],{cwd:root,env:{...process.env,PORT:String(port),STUDIO_DATA_DIR:data,STUDIO_LIVE_ENABLED:'false',STUDIO_APPROVED_MODEL:''},stdio:['ignore','pipe','pipe']});await new Promise((resolve,reject)=>{child.stdout.on('data',b=>{if(b.toString().includes('SIMULATION ONLY'))resolve();});child.on('error',reject);child.on('exit',code=>reject(new Error(`Server exited ${code}`)));});}
 async function stop(){const exited=once(child,'exit');child.kill();await exited;}
 async function auth(){const res=await fetch(base);const cookie=res.headers.get('set-cookie').split(';')[0];const boot=await(await fetch(base+'/api/bootstrap',{headers:{cookie}})).json();return {cookie,csrf:boot.csrf};}
 const post=(endpoint,body,session,extra={})=>fetch(base+endpoint,{method:'POST',headers:{cookie:session.cookie,'Content-Type':'application/json','Origin':base,'X-Studio-CSRF':session.csrf,...extra},body:JSON.stringify(body)});
@@ -27,6 +27,8 @@ test('protected durable generation workflow',async()=>{
   assert.equal((await post('/api/draft',draft,session)).status,200);
   assert.equal((await post('/api/jobs',{...draft,prompt:'@image2',token:'invalid-reference-1234'},session)).status,400);
   const token='duplicate-test-token-12345';const [first,second]=await Promise.all([post('/api/jobs',{...draft,token},session),post('/api/jobs',{...draft,token},session)]);const a=await first.json();const b=await second.json();assert.equal(a.id,b.id);assert.equal(a.status,'pending');
+  assert.equal((await post('/api/jobs',{...draft,prompt:'Different payload',token},session)).status,409);
+  assert.equal((await post('/api/jobs',{...draft,model:'kling-video/v3.0/std/image-to-video',prompt:'Slow cinematic push',ratio:'from-image',confirmPaid:true,token:'unapproved-live-job-12345'},session)).status,403);
   await new Promise(r=>setTimeout(r,1800));let jobs=await(await fetch(base+'/api/jobs',{headers:{cookie:session.cookie}})).json();assert.equal(jobs[0].status,'processing');
   await stop();await start();session=await auth();const bootstrap=await(await fetch(base+'/api/bootstrap',{headers:{cookie:session.cookie}})).json();assert.deepEqual(bootstrap.draft.references,[image.id]);
   await new Promise(r=>setTimeout(r,4000));jobs=await(await fetch(base+'/api/jobs',{headers:{cookie:session.cookie}})).json();assert.equal(jobs.length,1);assert.equal(jobs[0].status,'completed');assert.equal(jobs[0].id,a.id);

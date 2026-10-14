@@ -12,4 +12,5 @@ test('provider config never exposes secrets or enables paid requests',()=>{
   const status=publicProviderStatus(config);assert.equal(status.credentialsConfigured,true);assert.equal(status.liveEnabled,false);assert.equal(status.credentialVerified,false);assert.equal(JSON.stringify(status).includes(config.credential),false);
   assert.equal(readProviderConfig({HF_API_KEY_ID:'id',HF_API_KEY_SECRET:'secret'}).credential,'id:secret');
   assert.equal(publicProviderStatus(readProviderConfig({})).credentialsConfigured,false);
+  const verified={accepted:true,fingerprint:config.fingerprint,checkedAt:'test'};assert.equal(publicProviderStatus(config,verified).credentialVerified,true);assert.equal(publicProviderStatus(readProviderConfig({HF_API_KEY:'rotated'}),verified).credentialVerified,false);
 });

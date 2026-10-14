@@ -8,7 +8,7 @@ const out=path.resolve('test-results');mkdirSync(out,{recursive:true});
 const browser=await chromium.launch({headless:true});
 const context=await browser.newContext({viewport:{width:1440,height:1080},recordVideo:{dir:out,size:{width:1440,height:1080}}});
 const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
-await page.goto(process.env.STUDIO_TEST_URL || 'http://127.0.0.1:4310');await page.waitForFunction(()=>document.querySelector('#generate').disabled===false);
+await page.goto(process.env.STUDIO_TEST_URL || 'http://127.0.0.1:4310');await page.waitForFunction(()=>document.querySelector('#draft-status').textContent==='Draft saved locally');await page.locator('#model').selectOption('simulation-i2v');await page.waitForFunction(()=>document.querySelector('#generate').disabled===false);
 // Restore an empty workspace through the UI when re-running this QA script.
 while(await page.locator('.reference-card').count()) await page.locator('[data-remove]').first().click();
 if(await page.locator('#simulate-failure').isChecked()){await page.locator('.demo-options summary').click();await page.locator('#simulate-failure').uncheck();await page.locator('.demo-options summary').click();}
@@ -47,5 +47,9 @@ assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=windo
 assert.deepEqual(errors,[]);
 await page.locator('[data-page="settings"]').click();assert.match(await page.locator('#settings-page').innerText(),/Server-side API configuration/);
 await page.screenshot({path:path.join(out,'settings.png'),fullPage:true});
+await page.locator('[data-page="create"]').click();await page.locator('#model').selectOption('kling-video/v3.0/std/image-to-video');
+assert.equal(await page.locator('#ratio').inputValue(),'from-image');assert.equal(await page.locator('#ratio').isDisabled(),true);assert.equal(await page.locator('#generate').isDisabled(),true);assert.equal(await page.locator('#confirm-paid').isChecked(),false);
+assert.match(await page.locator('#model-help').innerText(),/one start frame|One start frame/);
+await page.screenshot({path:path.join(out,'live-approval-gate.png'),fullPage:true});
 console.log('Browser QA passed: five uploads, drag reorder, keyboard reorder, removal, reference insertion, invalid mention, draft reload, pending/processing/completed/failed, playable output, history, and mobile overflow.');
 const video=page.video();await context.close();console.log('Demo recording: '+await video.path());await browser.close();

@@ -4,14 +4,14 @@ import { createReadStream, existsSync, renameSync, statSync, writeFileSync } fro
 import { Readable } from 'node:stream';
 import path from 'node:path';
 import { z } from 'zod';
-import { MODEL, imageType, validateDraft } from '../../../lib.mjs';
+import { MODEL, LIVE_MODEL, imageType, validateDraft } from '../../../lib.mjs';
 import { readProviderConfig, publicProviderStatus } from '../../../provider-config.mjs';
 import { asset, getStore, jobView, type JobRow } from '../../../lib/studio';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 const uploadSchema = z.object({ filename: z.string().min(1).max(200), bytes: z.string().min(1).max(14 * 1024 * 1024) });
-const draftSchema = z.object({ prompt: z.string().max(6000), model: z.string(), duration: z.number(), ratio: z.string(), references: z.array(z.string().uuid()).max(8), simulateFailure: z.boolean().optional() });
+const draftSchema = z.object({ prompt: z.string().max(6000), model: z.string(), duration: z.number(), ratio: z.string(), references: z.array(z.string().uuid()).max(8), simulateFailure: z.boolean().optional(), confirmPaid:z.boolean().optional() });
 const submissionSchema = draftSchema.extend({ token: z.string().regex(/^[a-zA-Z0-9-]{16,80}$/) });
 const json = (value: unknown, status = 200) => Response.json(value, { status, headers: { 'Cache-Control': 'no-store' } });
 async function readJSON(req: NextRequest): Promise<unknown> {
@@ -23,7 +23,7 @@ async function readJSON(req: NextRequest): Promise<unknown> {
 function fileResponse(req: NextRequest, file: string, type: string, download = false): Response {
   const size = statSync(file).size;
   const headers: Record<string, string> = { 'Content-Type': type, 'Cache-Control': 'no-store', 'Accept-Ranges': 'bytes' };
-  if (download) headers['Content-Disposition'] = 'attachment; filename="studio-simulation.mp4"';
+  if (download) headers['Content-Disposition'] = 'attachment; filename="studio-output.mp4"';
   const range = req.headers.get('range')?.match(/^bytes=(\d+)-(\d*)$/);
   let start = 0; let end = size - 1; let status = 200;
   if (range) {
@@ -44,9 +44,12 @@ async function handle(req: NextRequest): Promise<Response> {
     const { db, data } = getStore();
     if (endpoint === '/api/bootstrap' && req.method === 'GET') {
       const saved = db.prepare("SELECT value FROM settings WHERE key='draft'").get() as { value: string } | undefined;
-      return json({ csrf: process.env.STUDIO_CSRF_TOKEN, model: MODEL, mode: 'simulation', draft: JSON.parse(saved?.value || 'null') });
+      return json({ csrf: process.env.STUDIO_CSRF_TOKEN, model: MODEL, models:[MODEL,LIVE_MODEL], mode: 'simulation', draft: JSON.parse(saved?.value || 'null') });
     }
-    if (endpoint === '/api/provider' && req.method === 'GET') return json(publicProviderStatus(readProviderConfig()));
+    if (endpoint === '/api/provider' && req.method === 'GET') {
+      const saved = db.prepare("SELECT value FROM settings WHERE key='provider-auth'").get() as {value:string} | undefined;
+      return json(publicProviderStatus(readProviderConfig(),saved ? JSON.parse(saved.value) : null));
+    }
     if (endpoint === '/api/assets' && req.method === 'POST') {
       const input = uploadSchema.parse(await readJSON(req)); const bytes = Buffer.from(input.bytes, 'base64');
       if (!bytes.length || bytes.length > 10 * 1024 * 1024) throw new Error('Each image must be smaller than 10 MB.');
@@ -68,14 +71,24 @@ async function handle(req: NextRequest): Promise<Response> {
     if (endpoint === '/api/jobs' && req.method === 'POST') {
       const input = submissionSchema.parse(await readJSON(req)); const settings = validateDraft(input, (id: string) => Boolean(asset(id)));
       const existing = db.prepare('SELECT * FROM jobs WHERE token=?').get(input.token) as JobRow | undefined;
-      if (existing) return json(jobView(existing));
-      const id = randomUUID(); db.prepare('INSERT INTO jobs VALUES(?,?,?,?)').run(id, input.token, Date.now(), JSON.stringify(settings));
+      if (existing) {
+        if(existing.settings!==JSON.stringify({...settings,confirmPaid:input.confirmPaid===true}))return json({error:'This submission token already belongs to different settings. Check the saved job before requesting another generation.'},409);
+        return json(jobView(existing));
+      }
+      if(settings.model===LIVE_MODEL.id){
+        const auth=db.prepare("SELECT value FROM settings WHERE key='provider-auth'").get() as {value:string}|undefined;
+        if(!publicProviderStatus(readProviderConfig(),auth?JSON.parse(auth.value):null).liveEnabled) return json({error:'Live generation is disabled. Approve the exact model and a paid run before enabling it.'},403);
+        if(input.confirmPaid!==true)return json({error:'Explicit approval for this paid generation is required.'},403);
+      }
+      const id = randomUUID();db.exec('BEGIN IMMEDIATE;');
+      try{db.prepare('INSERT INTO jobs VALUES(?,?,?,?)').run(id,input.token,Date.now(),JSON.stringify({...settings,confirmPaid:input.confirmPaid===true}));if(settings.model===LIVE_MODEL.id)db.prepare("INSERT INTO provider_jobs(job_id,state) VALUES(?,'pending')").run(id);db.exec('COMMIT;');}catch(error){db.exec('ROLLBACK;');throw error;}
       return json(jobView(db.prepare('SELECT * FROM jobs WHERE id=?').get(id) as JobRow), 201);
     }
     if (endpoint.startsWith('/api/output/') && req.method === 'GET') {
       const row = db.prepare('SELECT * FROM jobs WHERE id=?').get(endpoint.split('/')[3]) as JobRow | undefined;
       if (!row || jobView(row).status !== 'completed') return json({ error: 'No completed output available.' }, 404);
       const configured = JSON.parse(row.settings); const fixture = path.join(process.cwd(), 'fixtures', `simulation-${configured.ratio.replace(':', '-')}${configured.duration === 10 ? '-10s' : ''}.mp4`);
+      if(configured.model===LIVE_MODEL.id){const file=path.join(data,'outputs',row.id+'.mp4');if(!existsSync(file))return json({error:'The local output file is missing. Check the saved provider request; do not regenerate automatically.'},404);return fileResponse(req,file,'video/mp4',url.searchParams.has('download'));}
       if (!existsSync(fixture)) return json({ error: 'Simulation fixture is unavailable.' }, 503);
       return fileResponse(req, fixture, 'video/mp4', url.searchParams.has('download'));
     }

@@ -15,8 +15,16 @@ Environment: Windows, Node.js 22.17.0, installed Chromium via Playwright.
 
 Shared screenshots are tracked under `docs/screenshots/`; `docs/demo.mp4` contains the recorded full workflow and a results/pending-items end card. QA intermediates remain under ignored `test-results/`. Synthetic fixtures are tracked. Personal uploads and database files are ignored.
 
-No live provider job was submitted, and no paid request was sent. Simulation demonstrates the app workflow using a bundled sample, not generated media based on the user's prompt. Provider authentication, multi-image support, actual API polling/download recovery, and paid billing have not been verified.
+No live generation job was submitted, and no paid request was sent. Simulation demonstrates the app workflow using a bundled sample. A read-only Higgsfield status check accepted the locally configured credential. Actual model access, generated-output retrieval, signed media hosts, and paid billing remain unverified.
 
 The host npm launcher failed initially because its npm-cli.js lookup was broken. The installed npm CLI was invoked directly for dependency setup; build, lint, typecheck, and tests ran through local Node entry points. ESLint/TypeScript peer incompatibilities and a vulnerable development dependency chain were removed; the final installation reported zero known vulnerabilities. The in-app browser automation runtime failed to initialize; browser validation used the existing Playwright installation instead.
 
 A production-browser startup race was found and fixed: generation stays disabled and upload is guarded while the saved workspace is loading. The corrected full browser flow passed.
+
+## Higgsfield adapter update
+
+- Full suite expanded to 12 passing tests, including payload mapping, unsupported multi-image rejection, API/storage header separation, trusted URL validation, submission idempotency, request identity checks, credential fingerprint invalidation, saved worker identity, and no automatic retry of uncertain submissions.
+- The worker uses database leases and streams real outputs to temporary files before publication. Its generation/polling tests use mocks; no real paid request ran.
+- Browser QA passed in an isolated data directory, including the live-model approval gate, disabled image-derived aspect ratio, and unchecked per-job paid consent. The user's main draft was preserved during this QA run.
+- The main app reports credentials configured, authentication accepted, and live generation disabled. No key or fingerprint is returned to the browser.
+- The user explicitly chose to keep live generation disabled with no charges. No paid smoke test was run.

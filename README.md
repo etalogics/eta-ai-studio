@@ -2,7 +2,7 @@
 
 A working local first milestone: ordered image references, prompt mentions, image-to-video settings, simulated generation states, playable/downloadable sample output, and persistent generation history.
 
-**Simulation only.** No live AI adapter is installed, no credentials are used for requests, and no paid requests are sent. Output is a bundled synthetic animation matching the chosen 5- or 10-second duration and aspect ratio, clearly labelled in the UI. It does not depict the uploaded reference or execute the prompt.
+**Simulation is the default; live generation is disabled pending approval.** A Higgsfield/Kling adapter and durable worker are implemented. Server-side authentication has passed a read-only check, but no paid generation has run. Simulation output is a bundled animation matching the chosen 5- or 10-second duration and aspect ratio; it does not depict the uploaded reference or execute the prompt. See `docs/INTEGRATION.md` before enabling live mode.
 
 ## Run locally
 
@@ -19,7 +19,7 @@ Open **http://127.0.0.1:4310**. For development use `npm run dev` (or `node serv
 
 If the Windows npm launcher reports a missing npm-cli.js, use the npm CLI bundled with your Node installation, for example `node "C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js" ci`. This workaround was used during development. The final framework migration supersedes the initial plain-Node prototype.
 
-Optional configuration: copy `.env.example` to `.env`; set `PORT` and/or an absolute `STUDIO_DATA_DIR`. Restart after changes. API credentials must remain in `.env`, never browser code. The server supports `HF_API_KEY` with the complete copied REST credential, or `HF_API_KEY_ID` plus `HF_API_KEY_SECRET`. Set `STUDIO_PROVIDER=higgsfield` and record the approved exact endpoint in `STUDIO_APPROVED_MODEL` once verified. Settings reports only whether configuration is present; it never returns credential values. Configuring a key does not validate it or enable live generation. See `docs/provider-verification.md` for the official sources and verification limits.
+Optional configuration: copy `.env.example` to `.env`; set `PORT` and/or an absolute `STUDIO_DATA_DIR`. Restart after changes. API credentials must remain in `.env`, never browser code. The server supports `HF_API_KEY` with the complete copied REST credential, or `HF_API_KEY_ID` plus `HF_API_KEY_SECRET`. Settings reports configuration and authentication flags, never credential values. Configuring a key alone does not enable live generation. After explicit paid approval, set the documented model in `STUDIO_APPROVED_MODEL` and `STUDIO_LIVE_ENABLED=true`. Every live Generate action requires fresh consent. See `docs/INTEGRATION.md` and `docs/provider-verification.md` for limits and setup.
 
 ## Walk through the complete flow
 
@@ -52,7 +52,7 @@ npm run typecheck
 node --test test/core.test.mjs test/server.test.mjs
 ```
 
-Tests cover numbered-position mapping, unsupported inputs, nonexistent references, status transitions, upload signatures, secret-free provider status, session/Origin protection, duplicate submissions, restart recovery, saved draft order, failed generation, protected media, and video range requests. Build first: the integration test starts the production Next.js server, using a temporary data directory and port 14311.
+Use `npm test` (or `node --test test/core.test.mjs test/higgsfield.test.mjs test/worker.test.mjs test/server.test.mjs`) for the full 12-test suite. Tests cover reference mapping, input limits, upload signatures, credential rotation, secret-free status, protected routes, deduplication, restart recovery, history, video ranges, provider payloads, signed-upload header isolation, and worker recovery/consent. Routine provider tests are mocked. Build first: the server test starts production Next.js with a temporary database on port 14311.
 
 Optional browser QA requires an existing Playwright installation. Set `PLAYWRIGHT_MODULE` to its `index.mjs`, start the app on port 4310, then run `node test/browser.mjs`. **This creates synthetic reference uploads and two simulation jobs in the local app**, so run against a disposable data directory if you want empty history. Browser QA saves screenshots and a demo recording under ignored `test-results/`.
 
