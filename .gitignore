@@ -9,3 +9,6 @@ test-results/
 *.tsbuildinfo
 next-env.d.ts
 delivery/
+docs/LAPTOP_SETUP.md
+docs/MESSAGE_TO_NOUMAN.md
+docs/MORNING_UPDATE.md

@@ -37,7 +37,7 @@ Optional configuration: copy `.env.example` to `.env`; set `PORT` and/or an abso
 
 The server binds to loopback. Host validation, an HttpOnly SameSite session cookie, Origin validation, and a CSRF header protect API mutations. Images are served by database asset ID, never arbitrary paths. Upload byte signatures and size limits are checked server-side. Model choices, settings, assets, and mentions are checked again on submission. Unique submission tokens deduplicate repeated requests. Secrets, runtime data, and personal media are ignored by Git.
 
-Localhost protection is not public authentication. Do not expose this server on a LAN or through a public tunnel. This first milestone checks image signatures but does not perform full decoding, dimension limits, or malware scanning. There is no paid generation path.
+Localhost protection is not public authentication. Do not expose this server on a LAN or through a public tunnel. This milestone checks image signatures but does not perform full decoding, dimension limits, or malware scanning. Live generation is disabled until explicitly approved and configured.
 
 For backup, **stop the app first**, then copy the entire configured data directory, including SQLite sidecars if present. To restore, stop the app, replace that directory with the complete backup, and restart. No automatic cloud sync is implemented. Removing a reference from a draft does not delete the stored original; history may still use it. Asset cleanup is deferred.
 
@@ -61,6 +61,8 @@ See `docs/TEST_RESULTS.md` for observed results and `docs/INTEGRATION.md` for re
 The handoff includes `docs/HANDOFF.md`, `docs/demo.mp4`, and `docs/screenshots/`. On Windows, run `powershell -ExecutionPolicy Bypass -File scripts/package.ps1` after committing changes to create a source/demo archive under ignored `delivery/`. It includes tracked project files only, excluding credentials, databases, original personal references, build output, and installed dependencies.
 
 ## Company GitHub handoff
+
+Company repository: https://github.com/etalogics/eta-ai-studio. On Windows, `start-studio.cmd` starts a previously built installation.
 
 This folder is prepared as a separate repository. The company organization/repository destination is still required before upload. Do not publish it as part of the surrounding portfolio repository.
 
