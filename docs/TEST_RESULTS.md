@@ -7,7 +7,7 @@ Environment: Windows, Node.js 22.17.0, installed Chromium via Playwright.
 - JavaScript syntax checks for the server and browser application.
 - 5 automated test suites/subtests, zero failures: reference position mapping; unsupported model/settings and invalid references; recovered simulation lifecycle; upload signatures; protected durable end-to-end server workflow.
 - Server workflow verified session protection, cross-origin mutation rejection, invalid upload rejection, persisted draft order, concurrent submission deduplication, pending/processing/completed states, restart recovery without duplicate jobs, video byte-range delivery, arbitrary asset-path rejection, and failed simulation.
-- Browser workflow verified five-image upload, drag Image 5 into first position, keyboard-accessible reorder buttons, removal and renumbering, token insertion at the prompt cursor, invalid-reference feedback, draft refresh recovery, all four generation states, playable sample video metadata, history, and 390px mobile layout without horizontal overflow.
+- Browser workflow verified five-image upload, append without replacing existing images, drag Image 5 into first position, keyboard-accessible reorder buttons, removal and renumbering, token insertion at the prompt cursor, invalid-reference feedback, draft refresh recovery, all four generation states, decoded playable sample video, history, and 390px mobile layout without horizontal overflow.
 - Desktop and mobile screenshots were visually inspected.
 
 ## Deliverables and limits
