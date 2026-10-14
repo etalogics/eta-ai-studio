@@ -23,6 +23,7 @@ function renderReferences() {
   if (!currentJob) renderPreview();
 }
 async function upload(files) {
+  if (loadingDraft) return toast('Wait for the saved workspace to finish loading.');
   if (busy) return toast('Wait for the current upload to finish.');
   if (files.length+references.length>8) return showError('You can retain up to 8 images. Remove an image before adding more.');
   busy=true; $('#generate').disabled=true; showError(''); $('#draft-status').textContent='Uploading references…';
@@ -51,7 +52,7 @@ function renderPreview() {
   if (job.status==='completed') {
     content.innerHTML=`<video controls playsinline preload="metadata" src="${job.output}"></video>`;
     $('#output-actions').hidden=false; $('#download').href=job.output+'?download=1';
-    const label=document.createElement('div'); label.className='output-label'; label.textContent='SIMULATED OUTPUT · A bundled 5-second sample clip, not AI-generated from your references or prompt.'; $('#output-actions').after(label);
+    const label=document.createElement('div'); label.className='output-label'; label.textContent=`SIMULATED OUTPUT · A bundled ${job.settings.duration}-second sample clip, not AI-generated from your references or prompt.`; $('#output-actions').after(label);
   } else if (job.status==='failed') content.innerHTML=`<div class="job-info"><span class="banner-icon">⚠</span><h3>Generation failed</h3><p>${escape(job.error)}</p><button class="secondary" id="retry-settings">Review settings</button></div>`;
   else content.innerHTML=`<div class="job-info"><span class="spinner"></span><h3>${job.status==='pending'?'Your idea is in the queue.':'Simulating your generation.'}</h3><p>${job.status==='pending'?'Preparing the local demonstration…':'The sample output will be ready shortly.'}<br>No provider requests. No charges.</p></div>`;
 }
@@ -101,4 +102,9 @@ $('#create-form').addEventListener('submit',async event=>{
   busy=true;$('#generate').disabled=true;
   try{currentJob=await api('/api/jobs',{...draft,token:crypto.randomUUID()});renderPreview();await loadJobs();toast('Simulation started. No paid request was sent.');}catch(error){showError(error.message);}finally{busy=false;$('#generate').disabled=false;}
 });
-(async()=>{try{const bootstrap=await api('/api/bootstrap');csrf=bootstrap.csrf;if(bootstrap.draft)await restore(bootstrap.draft);loadingDraft=false;await loadJobs();if(jobs.length&&['pending','processing'].includes(jobs[0].status)){currentJob=jobs[0];renderPreview();}setInterval(()=>{if(jobs.some(j=>['pending','processing'].includes(j.status)))loadJobs();},1000);}catch(error){showError(error.message);$('#generate').disabled=true;}})();
+(async()=>{try{const bootstrap=await api('/api/bootstrap');csrf=bootstrap.csrf;
+  const provider=await api('/api/provider');
+  const card=document.createElement('div');card.className='settings-card';
+  card.innerHTML=`<h2>Server-side API configuration</h2><p>Provider: ${escape(provider.provider)}<br>Credentials: ${provider.credentialsConfigured?'Configured on server · unverified':'Not configured'}<br>Approved model: ${provider.modelConfigured?'Configured · verification pending':'Not configured'}<br>Live generation: disabled</p><p>Set credentials in the local .env file and restart. Keys are never returned to this page.</p><ul>${provider.blockers.map(item=>`<li>${escape(item)}</li>`).join('')}</ul>`;
+  $('#settings-page').append(card);
+  if(bootstrap.draft)await restore(bootstrap.draft);loadingDraft=false;await loadJobs();$('#generate').disabled=false;$('#draft-status').textContent='Draft saved locally';if(jobs.length&&['pending','processing'].includes(jobs[0].status)){currentJob=jobs[0];renderPreview();}setInterval(()=>{if(jobs.some(j=>['pending','processing'].includes(j.status)))loadJobs();},1000);}catch(error){showError(error.message);$('#generate').disabled=true;}})();

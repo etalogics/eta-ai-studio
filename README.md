@@ -2,22 +2,24 @@
 
 A working local first milestone: ordered image references, prompt mentions, image-to-video settings, simulated generation states, playable/downloadable sample output, and persistent generation history.
 
-**Simulation only.** No live AI adapter is installed, no credentials are used, and no paid requests are sent. Output is a bundled synthetic 5-second animation, clearly labelled in the UI. It does not depict the uploaded reference or execute the prompt. Selecting 10 seconds stores the requested setting; the demonstration clip remains 5 seconds.
+**Simulation only.** No live AI adapter is installed, no credentials are used for requests, and no paid requests are sent. Output is a bundled synthetic animation matching the chosen 5- or 10-second duration and aspect ratio, clearly labelled in the UI. It does not depict the uploaded reference or execute the prompt.
 
 ## Run locally
 
-Requires **Node.js 22.17.0 or newer** with `node:sqlite`. Tested on Windows with Node 22.17.0. SQLite is experimental in that Node version and may print a warning. The app uses Node built-ins, plain browser JavaScript, and CSS; no installation or build is required.
+Requires **Node.js 22.17.0 or newer** with `node:sqlite`. Tested on Windows with Node 22.17.0. SQLite is experimental in that Node version and may print a warning. Stack: Next.js 16.4 App Router, React 19.3, TypeScript 6, Tailwind 4, Zod, SQLite, and local filesystem storage. The lockfile records exact compatible dependency versions. The UI uses a server-rendered trusted workspace shell enhanced by a browser controller; API routes and storage are written in TypeScript.
 
 ```powershell
 cd D:\web-projects\wareesha-portfolio\ai-creator-studio
-node server.mjs
+npm ci
+npm run build
+npm start
 ```
 
-Open **http://127.0.0.1:4310**. For development use `node --watch server.mjs`. For normal use run `node server.mjs`. On macOS/Linux, enter the equivalent checkout directory and use the same commands. If npm is available, `npm start`, `npm run dev`, `npm test`, and `npm run check` are shortcuts. The host's npm launcher was broken during development; direct Node commands were used successfully.
+Open **http://127.0.0.1:4310**. For development use `npm run dev` (or `node server.mjs`). For production build use `npm run build` (or `node scripts/build.mjs`), then `npm start` (or `node server.mjs --production`). On macOS/Linux, enter the equivalent checkout directory and use the same commands. Use the custom server scripts so the loopback binding and local session protections are established; do not replace them with an unconfigured `next start` command.
 
-The revised one-day scope uses a small dependency-free Node server rather than the original full brief's Next.js/TypeScript/Tailwind stack. This avoids installing a framework for the simulation milestone. A move to that stack remains a separate follow-up if required; this deliverable does not claim full original-brief compliance.
+If the Windows npm launcher reports a missing npm-cli.js, use the npm CLI bundled with your Node installation, for example `node "C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js" ci`. This workaround was used during development. The final framework migration supersedes the initial plain-Node prototype.
 
-Optional configuration: copy `.env.example` to `.env`; set `PORT` and/or an absolute `STUDIO_DATA_DIR`. Restart after changes. API credentials must remain in `.env`, never browser code. No unverified credential names or endpoints are fabricated in this build.
+Optional configuration: copy `.env.example` to `.env`; set `PORT` and/or an absolute `STUDIO_DATA_DIR`. Restart after changes. API credentials must remain in `.env`, never browser code. The server supports `HF_API_KEY` with the complete copied REST credential, or `HF_API_KEY_ID` plus `HF_API_KEY_SECRET`. Set `STUDIO_PROVIDER=higgsfield` and record the approved exact endpoint in `STUDIO_APPROVED_MODEL` once verified. Settings reports only whether configuration is present; it never returns credential values. Configuring a key does not validate it or enable live generation. See `docs/provider-verification.md` for the official sources and verification limits.
 
 ## Walk through the complete flow
 
@@ -31,7 +33,7 @@ Optional configuration: copy `.env.example` to `.env`; set `PORT` and/or an abso
 
 ## Storage and safeguards
 
-`data/studio.sqlite` contains assets, jobs, and the saved draft. `data/references/` contains originals stored under generated IDs. The initial schema is version 1 via `PRAGMA user_version`; later schema migrations must be explicit. Synthetic output fixtures are tracked in `fixtures/`.
+`data/studio.sqlite` contains assets, jobs, and the saved draft. `data/references/` contains originals stored under generated IDs. Versioned SQL migrations under `db/migrations/` are applied on first API access using `PRAGMA user_version` and a transaction. Existing version-1 prototype data remains compatible. Synthetic output fixtures are tracked in `fixtures/`.
 
 The server binds to loopback. Host validation, an HttpOnly SameSite session cookie, Origin validation, and a CSRF header protect API mutations. Images are served by database asset ID, never arbitrary paths. Upload byte signatures and size limits are checked server-side. Model choices, settings, assets, and mentions are checked again on submission. Unique submission tokens deduplicate repeated requests. Secrets, runtime data, and personal media are ignored by Git.
 
@@ -44,14 +46,19 @@ For backup, **stop the app first**, then copy the entire configured data directo
 ```powershell
 node --check server.mjs
 node --check public/app.js
+npm run lint
+npm run build
+npm run typecheck
 node --test test/core.test.mjs test/server.test.mjs
 ```
 
-Tests cover numbered-position mapping, unsupported inputs, nonexistent references, status transitions, upload signatures, session/Origin protection, duplicate submissions, restart recovery, saved draft order, failed generation, protected media, and video range requests. The integration test uses a temporary data directory and port 14311.
+Tests cover numbered-position mapping, unsupported inputs, nonexistent references, status transitions, upload signatures, secret-free provider status, session/Origin protection, duplicate submissions, restart recovery, saved draft order, failed generation, protected media, and video range requests. Build first: the integration test starts the production Next.js server, using a temporary data directory and port 14311.
 
 Optional browser QA requires an existing Playwright installation. Set `PLAYWRIGHT_MODULE` to its `index.mjs`, start the app on port 4310, then run `node test/browser.mjs`. **This creates synthetic reference uploads and two simulation jobs in the local app**, so run against a disposable data directory if you want empty history. Browser QA saves screenshots and a demo recording under ignored `test-results/`.
 
 See `docs/TEST_RESULTS.md` for observed results and `docs/INTEGRATION.md` for remaining live integration work.
+
+The handoff includes `docs/HANDOFF.md`, `docs/demo.mp4`, and `docs/screenshots/`. On Windows, run `powershell -ExecutionPolicy Bypass -File scripts/package.ps1` after committing changes to create a source/demo archive under ignored `delivery/`. It includes tracked project files only, excluding credentials, databases, original personal references, build output, and installed dependencies.
 
 ## Company GitHub handoff
 

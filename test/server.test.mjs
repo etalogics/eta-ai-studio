@@ -10,7 +10,7 @@ const root=path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const data=mkdtempSync(path.join(tmpdir(),'studio-test-'));
 const port=14311;const base=`http://127.0.0.1:${port}`;
 let child;
-async function start(){child=spawn(process.execPath,['server.mjs'],{cwd:root,env:{...process.env,PORT:String(port),STUDIO_DATA_DIR:data},stdio:['ignore','pipe','pipe']});await new Promise((resolve,reject)=>{child.stdout.on('data',b=>{if(b.toString().includes('SIMULATION ONLY'))resolve();});child.on('error',reject);child.on('exit',code=>reject(new Error(`Server exited ${code}`)));});}
+async function start(){child=spawn(process.execPath,['server.mjs','--production'],{cwd:root,env:{...process.env,PORT:String(port),STUDIO_DATA_DIR:data},stdio:['ignore','pipe','pipe']});await new Promise((resolve,reject)=>{child.stdout.on('data',b=>{if(b.toString().includes('SIMULATION ONLY'))resolve();});child.on('error',reject);child.on('exit',code=>reject(new Error(`Server exited ${code}`)));});}
 async function stop(){const exited=once(child,'exit');child.kill();await exited;}
 async function auth(){const res=await fetch(base);const cookie=res.headers.get('set-cookie').split(';')[0];const boot=await(await fetch(base+'/api/bootstrap',{headers:{cookie}})).json();return {cookie,csrf:boot.csrf};}
 const post=(endpoint,body,session,extra={})=>fetch(base+endpoint,{method:'POST',headers:{cookie:session.cookie,'Content-Type':'application/json','Origin':base,'X-Studio-CSRF':session.csrf,...extra},body:JSON.stringify(body)});
@@ -18,6 +18,7 @@ test('protected durable generation workflow',async()=>{
  try{
   await start();let session=await auth();
   assert.equal((await fetch(base+'/api/jobs')).status,401);
+  const provider=await(await fetch(base+'/api/provider',{headers:{cookie:session.cookie}})).json();assert.equal(provider.liveEnabled,false);assert.equal(provider.credentialVerified,false);assert.equal('credential' in provider,false);
   assert.equal((await post('/api/jobs',{},session,{Origin:'https://evil.example'})).status,403);
   assert.equal((await post('/api/assets',{filename:'fake.png',bytes:Buffer.from('not an image').toString('base64')},session)).status,400);
   const png='iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a7T8AAAAASUVORK5CYII=';

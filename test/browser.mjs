@@ -20,10 +20,10 @@ await page.locator('#prompt').fill('Use @image1 as the opening frame. Match the 
 // Drag the fifth image into first position; mentions retain numbered-position semantics.
 await page.locator('.reference-card').nth(4).dragTo(page.locator('.reference-card').nth(0));
 assert.match(await page.locator('.reference-card').first().innerText(),/demo-reference-5/);
-await page.getByRole('button',{name:'Move image 1 right',exact:true}).click();
+await page.getByRole('button',{name:'Move image 1 right',exact:true}).press('Enter');
 await page.getByRole('button',{name:'Remove image 2',exact:true}).click();
 assert.equal(await page.locator('.reference-card').count(),4);
-await page.locator('#upload').setInputFiles([{name:'appended-reference.png',mimeType:'image/png',buffer:Buffer.from(images[0],'base64')}]);
+await page.evaluate(bytes=>{const data=new DataTransfer();data.items.add(new File([Uint8Array.from(atob(bytes),char=>char.charCodeAt(0))],'appended-reference.png',{type:'image/png'}));document.querySelector('#dropzone').dispatchEvent(new DragEvent('drop',{bubbles:true,dataTransfer:data}));},images[0]);
 await page.waitForFunction(()=>document.querySelectorAll('.reference-card').length===5);
 assert.match(await page.locator('.reference-card').last().innerText(),/appended-reference/);
 await page.getByRole('button',{name:'Remove image 5',exact:true}).click();
@@ -32,11 +32,12 @@ await page.locator('#prompt').fill('A slow cinematic push-in on @image1. Match t
 await page.locator('#prompt').click();await page.getByRole('button',{name:'@image3',exact:true}).click();assert.match(await page.locator('#prompt').inputValue(),/@image3/);
 await page.waitForFunction(()=>document.querySelector('#draft-status').textContent==='Draft saved locally');
 await page.reload();await page.waitForFunction(()=>document.querySelectorAll('.reference-card').length===4);
+await page.locator('#duration').selectOption('10');
 await page.locator('#generate').click();await page.waitForFunction(()=>document.querySelector('#preview-badge').textContent==='Pending');
 await page.waitForFunction(()=>document.querySelector('#preview-badge').textContent==='Processing');
 await page.waitForFunction(()=>document.querySelector('#preview-badge').textContent==='Completed');
 await page.waitForFunction(()=>document.querySelector('video')?.readyState>=1);
-assert.equal(await page.locator('video').evaluate(v=>Math.round(v.duration)),5);
+assert.equal(await page.locator('video').evaluate(v=>Math.round(v.duration)),10);
 await page.locator('video').evaluate(async v=>{await v.play();await new Promise(resolve=>v.requestVideoFrameCallback(resolve));});
 await page.screenshot({path:path.join(out,'completed.png'),fullPage:true});
 await page.locator('[data-page="history"]').click();await page.waitForSelector('.history-card');await page.screenshot({path:path.join(out,'history.png'),fullPage:true});
@@ -44,5 +45,7 @@ await page.locator('[data-restore-job]').first().click();await page.locator('.de
 await page.setViewportSize({width:390,height:844});await page.screenshot({path:path.join(out,'mobile.png'),fullPage:true});
 assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),true);
 assert.deepEqual(errors,[]);
+await page.locator('[data-page="settings"]').click();assert.match(await page.locator('#settings-page').innerText(),/Server-side API configuration/);
+await page.screenshot({path:path.join(out,'settings.png'),fullPage:true});
 console.log('Browser QA passed: five uploads, drag reorder, keyboard reorder, removal, reference insertion, invalid mention, draft reload, pending/processing/completed/failed, playable output, history, and mobile overflow.');
 const video=page.video();await context.close();console.log('Demo recording: '+await video.path());await browser.close();

@@ -5,3 +5,7 @@ data/
 *.sqlite*
 test-results/
 *.log
+.next/
+*.tsbuildinfo
+next-env.d.ts
+delivery/
